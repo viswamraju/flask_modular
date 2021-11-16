@@ -11,31 +11,41 @@ from flask_babel import Babel
 from flask_babel import lazy_gettext as _l
 # Other imports
 import os
+import config
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-app = Flask(__name__)
-app.config.from_mapping(
-    SECRET_KEY=os.environ.get("FLASK_SECRET_KEY") or "prc9FWjeLYh_KsPGm0vJcg",
-    SQLALCHEMY_DATABASE_URI="sqlite:///"+ os.path.join(basedir, "globomantics.sqlite"),
-    SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    MAX_CONTENT_LENGTH=16*1024*1024,
-    IMAGE_UPLOADS=os.path.join(basedir, "uploads"),
-    ALLOWED_IMAGE_EXTENSIONS=["jpeg", "jpg", "png"]
-)
+db = SQLAlchemy()
+babel = Babel()
+login_manager = LoginManager()
 
-# Initializing extensions
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
-babel = Babel(app)
-login_manager = LoginManager(app)
-login_manager.login_view = "login"
-login_manager.session_protection = "strong"
-login_manager.login_message = _l("You need to be logged in to access this page.")
-login_manager.login_message_category = "danger"
+def create_app(config_env=""):
+    app = Flask(__name__)
+    if not config_env:
+        config_env = app.env
+    app.config.from_object("config.{}Config".format(config_env.capitalize()))
 
-# Imports from subpackages (views)
-from app.album import views
-from app.auth import views
-from app.main import views
-from app.tour import views
+    # Initializing extensions
+    db.init_app(app)
+    babel.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = "auth.login"
+    login_manager.session_protection = "strong"
+    login_manager.login_message = _l("You need to be logged in to access this page.")
+    login_manager.login_message_category = "danger"
+
+    # Imports from subpackages (views)
+    with app.app_context():
+        from app.album.views import album
+        app.register_blueprint(album, url_prefix="/album")
+        from app.main.views import main
+        app.register_blueprint(main)
+    from app.tour.views import tour
+    app.register_blueprint(tour, url_prefix="/tour")
+    from app.auth.views import auth
+    app.register_blueprint(auth)
+
+    from app.main.views import page_not_found
+    app.register_error_handler(404, page_not_found)
+
+    return app

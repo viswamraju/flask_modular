@@ -1,3 +1,4 @@
+from flask import current_app
 # Extension for implementing WTForms for managing web forms
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed, FileRequired
@@ -6,8 +7,6 @@ from wtforms.fields.html5 import DateField
 from wtforms.validators import InputRequired, DataRequired, Length
 # Extension for implementing translations
 from flask_babel import lazy_gettext as _l
-# Imports from the app package
-from app import app
 
 # General Album form
 class AlbumForm(FlaskForm):
@@ -47,7 +46,7 @@ class CreateAlbumForm(AlbumForm):
 								)
 	image		= FileField(_l("Album cover"),
 								validators=[
-									FileAllowed(app.config["ALLOWED_IMAGE_EXTENSIONS"], "Images only!"),
+									FileAllowed(current_app.config["ALLOWED_IMAGE_EXTENSIONS"], "Images only!"),
 									FileRequired()
 								])
 	submit 		= SubmitField(_l("Upload album"))
